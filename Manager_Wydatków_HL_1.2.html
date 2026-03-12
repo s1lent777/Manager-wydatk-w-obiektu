@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Kosztow Obiektu (Offline) v11</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .modal { display: none; }
+        .modal.is-open { display: flex; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab.active { border-bottom-color: #3b82f6; color: #3b82f6; }
+        .dashboard-card {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .date-range-btn {
+            background-color: #e5e7eb;
+            color: #374151;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .date-range-btn:hover {
+             background-color: #d1d5db;
+        }
+        #undo-import-btn:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="mb-4">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 text-center">Manager Kosztow Obiektu</h1>
+            <p class="text-gray-600 mt-2 text-center">Narzedzie do analizy kosztow w Twoim obiekcie. (Wersja Lokalna)</p>
+        </header>
+        
+        <div class="bg-white p-4 rounded-xl shadow-md mb-8">
+            <h2 class="text-lg font-semibold text-gray-700 mb-3 text-center">Wybierz Okres Analizy</h2>
+            <div class="flex flex-wrap justify-center items-center gap-4">
+                <div>
+                    <label for="start-date" class="text-sm font-medium mr-2">Od:</label>
+                    <input type="date" id="start-date" class="p-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label for="end-date" class="text-sm font-medium mr-2">Do:</label>
+                    <input type="date" id="end-date" class="p-2 border border-gray-300 rounded-md">
+                </div>
+            </div>
+            <div class="flex flex-wrap justify-center items-center gap-2 mt-4">
+                <button id="range-this-month" class="date-range-btn">Ten Miesiac</button>
+                <button id="range-last-month" class="date-range-btn">Poprzedni Miesiac</button>
+                <button id="range-this-year" class="date-range-btn">Ten Rok</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div class="space-y-6">
+                <h2 class="text-2xl font-bold text-center md:text-left">Analiza Sniadan</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div class="dashboard-card sm:col-span-2">
+                        <h2 class="text-lg font-semibold text-gray-700">Wydatki na Zakupy (Sniadania)</h2>
+                        <p id="total-food-expenses" class="text-3xl font-bold text-green-600 mt-2">0.00 zl</p>
+                    </div>
+                    <div class="dashboard-card">
+                        <h2 class="text-lg font-semibold text-gray-700">Liczba Sniadan</h2>
+                        <p id="total-breakfasts-count" class="text-3xl font-bold text-purple-600 mt-2">0</p>
+                    </div>
+                    <div class="dashboard-card">
+                        <h2 class="text-lg font-semibold text-gray-700">Koszt / Sniadanie</h2>
+                        <p id="average-breakfast-cost" class="text-3xl font-bold text-blue-600 mt-2">0.00 zl</p>
+                    </div>
+                     <div class="dashboard-card sm:col-span-2">
+                        <h2 class="text-lg font-semibold text-gray-700">Koszt (Sniadania) / Goscia</h2>
+                        <p id="average-food-cost-per-guest" class="text-3xl font-bold text-blue-600 mt-2">0.00 zl</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <h2 class="text-2xl font-bold text-center md:text-left">Analiza Pokoi i Gosci</h2>
+                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div class="dashboard-card sm:col-span-2">
+                        <h2 class="text-lg font-semibold text-gray-700">Wydatki na Zakupy (Pokoje)</h2>
+                        <p id="total-nonfood-expenses" class="text-3xl font-bold text-teal-600 mt-2">0.00 zl</p>
+                    </div>
+                    <div class="dashboard-card">
+                        <h2 class="text-lg font-semibold text-gray-700">Liczba Pokoi</h2>
+                        <p id="total-rooms-count" class="text-3xl font-bold text-purple-600 mt-2">0</p>
+                    </div>
+                    <div class="dashboard-card">
+                        <h2 class="text-lg font-semibold text-gray-700">Laczna Liczba Gosci</h2>
+                        <p id="total-guests-count" class="text-3xl font-bold text-purple-600 mt-2">0</p>
+                    </div>
+                    <div class="dashboard-card">
+                        <h2 class="text-lg font-semibold text-gray-700">Koszt / Pokoj</h2>
+                        <p id="average-room-cost" class="text-3xl font-bold text-blue-600 mt-2">0.00 zl</p>
+                    </div>
+                    <div class="dashboard-card">
+                        <h2 class="text-lg font-semibold text-gray-700">Koszt (Pokoje) / Goscia</h2>
+                        <p id="average-nonfood-cost-per-guest" class="text-3xl font-bold text-blue-600 mt-2">0.00 zl</p>
+                    </div>
+                 </div>
+            </div>
+        </div>
+
+
+        <div class="mb-6 border-b border-gray-200">
+            <nav class="flex flex-wrap space-x-4 -mb-px" aria-label="Tabs">
+                <button onclick="changeTab(event, 'productsTab')" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-600 hover:border-blue-300 active">Produkty</button>
+                <button onclick="changeTab(event, 'suppliersTab')" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-600 hover:border-blue-300">Dostawcy</button>
+                <button onclick="changeTab(event, 'purchasesTab')" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-600 hover:border-blue-300">Zakupy</button>
+                <button onclick="changeTab(event, 'breakfastsTab')" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-600 hover:border-blue-300">Sniadania</button>
+                <button onclick="changeTab(event, 'roomsTab')" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-600 hover:border-blue-300">Pokoje i Goscie</button>
+                <button onclick="changeTab(event, 'priceAnalysisTab')" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-600 hover:border-blue-300">Analiza Cen</button>
+                <button onclick="changeTab(event, 'analysisTab')" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-600 hover:border-blue-300">Analiza Produktow</button>
+                <button onclick="changeTab(event, 'categoryAnalysisTab')" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-600 hover:border-blue-300">Analiza Kategorii</button>
+                <button onclick="changeTab(event, 'settingsTab')" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-blue-600 hover:border-blue-300">Ustawienia</button>
+            </nav>
+        </div>
+        
+        <div id="productsTab" class="tab-content active">
+             <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Lista Produktow</h2>
+                <button onclick="openModal('addProductModal')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors flex items-center"><i class="fas fa-plus mr-2"></i>Dodaj Produkt</button>
+            </div>
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="p-4 font-semibold">Nazwa Produktu</th>
+                            <th class="p-4 font-semibold">Przeznaczenie</th>
+                            <th class="p-4 font-semibold">Kategoria</th>
+                            <th class="p-4 font-semibold text-right">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="products-table"></tbody>
+                </table>
+                 <div id="products-placeholder" class="text-center p-8 text-gray-500">Brak produktow.</div>
+            </div>
+        </div>
+
+        <div id="suppliersTab" class="tab-content">
+             <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Lista Dostawcow</h2>
+                <button onclick="openModal('addSupplierModal')" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors flex items-center"><i class="fas fa-plus mr-2"></i>Dodaj Dostawce</button>
+            </div>
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="p-4 font-semibold">Nazwa Dostawcy</th>
+                            <th class="p-4 font-semibold text-right">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="suppliers-table"></tbody>
+                </table>
+                 <div id="suppliers-placeholder" class="text-center p-8 text-gray-500">Brak zdefiniowanych dostawcow.</div>
+            </div>
+        </div>
+
+        <div id="purchasesTab" class="tab-content">
+             <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                <h2 class="text-2xl font-bold">Historia Zakupow</h2>
+                 <div class="flex gap-2">
+                    <button onclick="openModal('addPurchaseModal')" class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition-colors flex items-center"><i class="fas fa-plus mr-2"></i>Dodaj Pojedynczy</button>
+                    <button onclick="openBatchPurchaseModal()" class="bg-cyan-600 text-white px-4 py-2 rounded-lg shadow hover:bg-cyan-700 transition-colors flex items-center"><i class="fas fa-file-invoice-dollar mr-2"></i>Zarejestruj Zakup Zbiorczy</button>
+                 </div>
+            </div>
+             <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="p-4 font-semibold">Data</th>
+                            <th class="p-4 font-semibold">Nr Faktury</th>
+                            <th class="p-4 font-semibold">Dostawca</th>
+                            <th class="p-4 font-semibold">Produkt</th>
+                            <th class="p-4 font-semibold">Ilosc</th>
+                            <th class="p-4 font-semibold">Calkowity Koszt</th>
+                            <th class="p-4 font-semibold text-right">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="purchases-table"></tbody>
+                </table>
+                <div id="purchases-placeholder" class="text-center p-8 text-gray-500">Brak zakupow.</div>
+            </div>
+        </div>
+        
+        <div id="breakfastsTab" class="tab-content">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                 <h2 class="text-2xl font-bold mb-4">Zapisz Liczbe Przygotowanych Sniadan</h2>
+                <form id="add-breakfast-form" class="flex flex-col md:flex-row items-end gap-4 mb-6">
+                    <div class="w-full md:flex-1"><label for="breakfast-date" class="block text-sm font-medium text-gray-700">Data</label><input type="date" id="breakfast-date" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required></div>
+                    <div class="w-full md:w-1/4"><label for="breakfast-count" class="block text-sm font-medium text-gray-700">Liczba sniadan</label><input type="number" id="breakfast-count" step="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="np. 25" required></div>
+                    <button type="submit" class="w-full md:w-auto bg-purple-600 text-white px-4 py-2 rounded-lg shadow hover:bg-purple-700 transition-colors flex items-center justify-center"><i class="fas fa-save mr-2"></i>Zapisz</button>
+                </form>
+                <h3 class="text-xl font-bold mb-4 mt-8">Zapisana Historia Sniadan</h3>
+                <div class="overflow-x-auto">
+                     <table class="w-full text-left"><thead class="bg-gray-50"><tr><th class="p-4 font-semibold">Data</th><th class="p-4 font-semibold">Liczba Sniadan</th><th class="p-4 font-semibold text-right">Akcje</th></tr></thead><tbody id="breakfasts-table"></tbody></table>
+                    <div id="breakfasts-placeholder" class="text-center p-8 text-gray-500">Brak zapisanych sniadan.</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="roomsTab" class="tab-content">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-2xl font-bold mb-4">Zapisz Dane o Pokojach i Gosciach</h2>
+                <form id="add-room-form" class="flex flex-col md:flex-row items-end gap-4 mb-6">
+                    <div class="w-full md:flex-1"><label for="room-date" class="block text-sm font-medium text-gray-700">Data</label><input type="date" id="room-date" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required></div>
+                    <div class="w-full md:w-1/4"><label for="room-count" class="block text-sm font-medium text-gray-700">Liczba pokoi</label><input type="number" id="room-count" step="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="np. 15" required></div>
+                    <div class="w-full md:w-1/4"><label for="guest-count" class="block text-sm font-medium text-gray-700">Liczba gosci</label><input type="number" id="guest-count" step="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="np. 35" required></div>
+                    <button type="submit" class="w-full md:w-auto bg-teal-600 text-white px-4 py-2 rounded-lg shadow hover:bg-teal-700 transition-colors flex items-center justify-center"><i class="fas fa-save mr-2"></i>Zapisz</button>
+                </form>
+                <h3 class="text-xl font-bold mb-4 mt-8">Zapisana Historia</h3>
+                <div class="overflow-x-auto">
+                     <table class="w-full text-left"><thead class="bg-gray-50"><tr><th class="p-4 font-semibold">Data</th><th class="p-4 font-semibold">Liczba Pokoi</th><th class="p-4 font-semibold">Liczba Gosci</th><th class="p-4 font-semibold text-right">Akcje</th></tr></thead><tbody id="rooms-table"></tbody></table>
+                    <div id="rooms-placeholder" class="text-center p-8 text-gray-500">Brak zapisanych danych.</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="priceAnalysisTab" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Analiza Cen Produktow</h2>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <div class="mb-4">
+                    <label for="price-analysis-product-select" class="block text-sm font-medium text-gray-700">Wybierz produkt do analizy</label>
+                    <select id="price-analysis-product-select" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        <option value="">-- Wybierz produkt --</option>
+                    </select>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="p-4 font-semibold">Data</th>
+                                <th class="p-4 font-semibold">Dostawca</th>
+                                <th class="p-4 font-semibold">Ilosc</th>
+                                <th class="p-4 font-semibold">Calkowity Koszt</th>
+                                <th class="p-4 font-semibold">Cena Jednostkowa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="price-analysis-table"></tbody>
+                    </table>
+                    <div id="price-analysis-placeholder" class="text-center p-8 text-gray-500">Wybierz produkt, aby zobaczyc historie jego cen.</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="analysisTab" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Analiza Zuzycia Produktow</h2>
+                <div id="analysis-type-toggle-product" class="flex items-center space-x-2 rounded-lg bg-gray-200 p-1">
+                    <button data-type="food" class="px-3 py-1 text-sm font-medium rounded-md">Sniadania</button>
+                    <button data-type="non_food" class="px-3 py-1 text-sm font-medium rounded-md">Pokoje</button>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="p-4 font-semibold">Produkt</th>
+                            <th class="p-4 font-semibold">Calkowite Zuzycie</th>
+                            <th class="p-4 font-semibold">Srednie Zuzycie / jednostke</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analysis-table"></tbody>
+                </table>
+                 <div id="analysis-placeholder" class="text-center p-8 text-gray-500">Brak danych do analizy.</div>
+            </div>
+        </div>
+        
+        <div id="categoryAnalysisTab" class="tab-content">
+             <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Analiza Kosztow wg Kategorii</h2>
+                 <div id="analysis-type-toggle-category" class="flex items-center space-x-2 rounded-lg bg-gray-200 p-1">
+                    <button data-type="food" class="px-3 py-1 text-sm font-medium rounded-md">Sniadania</button>
+                    <button data-type="non_food" class="px-3 py-1 text-sm font-medium rounded-md">Pokoje</button>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="p-4 font-semibold">Kategoria</th>
+                            <th class="p-4 font-semibold">Calkowity Koszt</th>
+                            <th class="p-4 font-semibold">Udzial w Kosztach</th>
+                            <th class="p-4 font-semibold">Srednie Zuzycie / jednostke</th>
+                        </tr>
+                    </thead>
+                    <tbody id="category-analysis-table"></tbody>
+                </table>
+                 <div id="category-analysis-placeholder" class="text-center p-8 text-gray-500">Brak danych do analizy.</div>
+            </div>
+        </div>
+        
+        <div id="settingsTab" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4">Zarzadzanie Danymi</h2>
+            <div class="bg-white p-6 rounded-xl shadow-md space-y-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800">Eksport Danych (Kopia Zapasowa)</h3>
+                    <p class="text-gray-600 mt-1 mb-3">Zapisz wszystkie dane do pliku `.json`. Zawsze rob kopie przed waznymi zmianami.</p>
+                    <button id="export-json-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700">Eksportuj Kopie Zapasowa (.json)</button>
+                </div>
+                <div class="border-t pt-6">
+                     <h3 class="text-lg font-semibold text-gray-800">Eksport Raportu (dla Excela)</h3>
+                    <p class="text-gray-600 mt-1 mb-3">Zapisz historie zakupow z **aktualnie wybranego okresu** do pliku `.csv`.</p>
+                    <button id="export-csv-btn" class="bg-teal-600 text-white px-4 py-2 rounded-lg shadow hover:bg-teal-700">Eksportuj Raport do Excela (.csv)</button>
+                </div>
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-semibold text-gray-800">Import Danych (z Kopii Zapasowej)</h3>
+                    <p class="text-gray-600 mt-1 mb-3">Wczytaj dane z pliku `.json`. <strong class="text-red-600">Nadpisze to wszystkie obecne dane!</strong></p>
+                    <button id="import-data-btn" class="bg-orange-500 text-white px-4 py-2 rounded-lg shadow hover:bg-orange-600">Importuj Dane z Pliku (.json)</button>
+                    <input type="file" id="import-file-input" class="hidden" accept=".json">
+                </div>
+                <div class="border-t pt-6 border-red-300">
+                    <h3 class="text-lg font-semibold text-red-700">Strefa Bezpieczenstwa</h3>
+                    <p class="text-gray-600 mt-1 mb-3">Jesli ostatni import danych byl bledny, mozesz go tutaj cofnac. Ta operacja jest jednorazowa.</p>
+                    <button id="undo-import-btn" class="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700">Cofnij ostatni import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="addProductModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Dodaj Nowy Produkt</h3>
+            <form id="add-product-form">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium">Przeznaczenie</label>
+                    <div class="mt-2 space-x-4"><label><input type="radio" name="productUsage" value="food" checked> Sniadania</label><label><input type="radio" name="productUsage" value="non_food"> Pokoje</label></div>
+                </div>
+                <div class="mb-4"><label for="product-name" class="block text-sm font-medium">Nazwa Produktu</label><input type="text" id="product-name" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required></div>
+                <div class="mb-4"><label for="product-type" class="block text-sm font-medium">Typ Produktu</label>
+                    <select id="product-type" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required>
+                        <option value="weight">Waga (kg)</option><option value="volume">Objetosc (l)</option><option value="pieces">Sztuki (szt)</option>
+                    </select>
+                </div>
+                <div class="mb-4"><label for="product-category" class="block text-sm font-medium">Kategoria</label>
+                    <input type="text" id="product-category" list="category-datalist" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="np. Nabial lub Chemia">
+                    <datalist id="category-datalist"></datalist>
+                </div>
+                <div class="flex justify-end gap-4"><button type="button" onclick="closeModal('addProductModal')" class="bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300">Anuluj</button><button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Zapisz</button></div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="editProductModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Edytuj Produkt</h3>
+            <form id="edit-product-form">
+                <input type="hidden" id="edit-product-id">
+                 <div class="mb-4">
+                    <label class="block text-sm font-medium">Przeznaczenie</label>
+                    <div class="mt-2 space-x-4"><label><input type="radio" name="edit_productUsage" value="food"> Sniadania</label><label><input type="radio" name="edit_productUsage" value="non_food"> Pokoje</label></div>
+                </div>
+                <div class="mb-4"><label for="edit-product-name" class="block text-sm font-medium">Nazwa Produktu</label><input type="text" id="edit-product-name" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required></div>
+                <div class="mb-4"><label for="edit-product-type" class="block text-sm font-medium">Typ Produktu</label>
+                    <select id="edit-product-type" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required>
+                        <option value="weight">Waga (kg)</option><option value="volume">Objetosc (l)</option><option value="pieces">Sztuki (szt)</option>
+                    </select>
+                </div>
+                <div class="mb-4"><label for="edit-product-category" class="block text-sm font-medium">Kategoria</label>
+                    <input type="text" id="edit-product-category" list="category-datalist" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="np. Nabial lub Chemia">
+                </div>
+                <div class="flex justify-end gap-4"><button type="button" onclick="closeModal('editProductModal')" class="bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300">Anuluj</button><button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Zapisz Zmiany</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addSupplierModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Dodaj Nowego Dostawce</h3>
+            <form id="add-supplier-form">
+                <div class="mb-4"><label for="supplier-name" class="block text-sm font-medium">Nazwa Dostawcy</label><input type="text" id="supplier-name" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required></div>
+                <div class="flex justify-end gap-4"><button type="button" onclick="closeModal('addSupplierModal')" class="bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300">Anuluj</button><button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Zapisz</button></div>
+            </form>
+        </div>
+    </div>
+    <div id="editSupplierModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Edytuj Dostawce</h3>
+            <form id="edit-supplier-form">
+                <input type="hidden" id="edit-supplier-id">
+                <div class="mb-4"><label for="edit-supplier-name" class="block text-sm font-medium">Nazwa Dostawcy</label><input type="text" id="edit-supplier-name" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required></div>
+                <div class="flex justify-end gap-4"><button type="button" onclick="closeModal('editSupplierModal')" class="bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300">Anuluj</button><button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Zapisz Zmiany</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addPurchaseModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Zarejestruj Pojedynczy Zakup</h3>
+            <form id="add-purchase-form">
+                <div class="mb-4"><label for="purchase-date" class="block text-sm font-medium text-gray-700">Data Zakupu</label><input type="date" id="purchase-date" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required></div>
+                <div class="mb-4"><label for="purchase-supplier-select" class="block text-sm font-medium">Dostawca</label><select id="purchase-supplier-select" class="mt-1 block w-full p-2 border rounded-md" required></select></div>
+                <div class="mb-4"><label for="purchase-product-select" class="block text-sm font-medium">Produkt</label><select id="purchase-product-select" class="mt-1 block w-full p-2 border rounded-md" required></select></div>
+                <div class="mb-4"><label for="purchase-quantity" class="block text-sm font-medium">Ilosc</label><input type="number" id="purchase-quantity" step="0.01" class="mt-1 block w-full p-2 border rounded-md" required></div>
+                <div class="mb-4"><label for="purchase-cost" class="block text-sm font-medium">Calkowity Koszt (zl)</label><input type="number" id="purchase-cost" step="0.01" class="mt-1 block w-full p-2 border rounded-md" required></div>
+                <div class="flex justify-end gap-4"><button type="button" onclick="closeModal('addPurchaseModal')" class="bg-gray-200 px-4 py-2 rounded-lg">Anuluj</button><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg">Zarejestruj</button></div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="editPurchaseModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Edytuj Zakup</h3>
+            <form id="edit-purchase-form">
+                <input type="hidden" id="edit-purchase-id">
+                <div class="mb-4"><label for="edit-purchase-date" class="block text-sm font-medium text-gray-700">Data Zakupu</label><input type="date" id="edit-purchase-date" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required></div>
+                <div class="mb-4"><label for="edit-purchase-supplier-select" class="block text-sm font-medium">Dostawca</label><select id="edit-purchase-supplier-select" class="mt-1 block w-full p-2 border rounded-md" required></select></div>
+                <div class="mb-4"><label for="edit-purchase-product-select" class="block text-sm font-medium">Produkt</label><select id="edit-purchase-product-select" class="mt-1 block w-full p-2 border rounded-md" required></select></div>
+                <div class="mb-4"><label for="edit-purchase-quantity" class="block text-sm font-medium">Ilosc</label><input type="number" id="edit-purchase-quantity" step="0.01" class="mt-1 block w-full p-2 border rounded-md" required></div>
+                <div class="mb-4"><label for="edit-purchase-cost" class="block text-sm font-medium">Calkowity Koszt (zl)</label><input type="number" id="edit-purchase-cost" step="0.01" class="mt-1 block w-full p-2 border rounded-md" required></div>
+                <div class="flex justify-end gap-4"><button type="button" onclick="closeModal('editPurchaseModal')" class="bg-gray-200 px-4 py-2 rounded-lg">Anuluj</button><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg">Zapisz Zmiany</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addBatchPurchaseModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <h3 class="text-xl font-semibold mb-4">Zarejestruj Zakup Zbiorczy (z Faktury)</h3>
+            <form id="add-batch-purchase-form" class="flex-grow overflow-y-auto pr-2">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div><label for="batch-purchase-date" class="block text-sm font-medium text-gray-700">Data Zakupu</label><input type="date" id="batch-purchase-date" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required></div>
+                    <div><label for="batch-purchase-supplier-select" class="block text-sm font-medium text-gray-700">Dostawca</label><select id="batch-purchase-supplier-select" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" required></select></div>
+                    <div><label for="batch-purchase-invoice" class="block text-sm font-medium text-gray-700">Nr Faktury / Paragonu (opcjonalnie)</label><input type="text" id="batch-purchase-invoice" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></div>
+                </div>
+                <div id="batch-purchase-items-container" class="space-y-3 mb-4">
+                    </div>
+                 <button type="button" id="add-batch-item-btn" class="text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded-md flex items-center gap-2"><i class="fas fa-plus"></i>Dodaj kolejny produkt</button>
+            </form>
+            <div class="flex justify-end gap-4 mt-6 pt-4 border-t">
+                <button type="button" onclick="closeModal('addBatchPurchaseModal')" class="bg-gray-200 px-4 py-2 rounded-lg">Anuluj</button>
+                <button type="submit" form="add-batch-purchase-form" class="bg-cyan-600 text-white px-4 py-2 rounded-lg">Zarejestruj Wszystko</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm"><h3 class="text-lg font-bold mb-4">Potwierdzenie</h3><p id="confirm-text" class="mb-6 text-gray-600">Czy na pewno chcesz usunac ten element?</p><div class="flex justify-end gap-4"><button id="confirmCancel" class="bg-gray-200 px-4 py-2 rounded-lg">Anuluj</button><button id="confirmOk" class="bg-red-600 text-white px-4 py-2 rounded-lg">Potwierdz</button></div></div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let startDate, endDate;
+    let currentAnalysisType = 'food';
+
+    const DB = {
+        get: (key, defaultValue = '[]') => JSON.parse(localStorage.getItem(key) || defaultValue),
+        set: (key, data) => localStorage.setItem(key, JSON.stringify(data)),
+        remove: (key) => localStorage.removeItem(key),
+    };
+
+    let products = DB.get('products');
+    let suppliers = DB.get('suppliers');
+    let purchases = DB.get('purchases');
+    let breakfasts = DB.get('breakfasts');
+    let cleanedRooms = DB.get('cleanedRooms');
+    let categories = DB.get('categories', JSON.stringify(['Nabial', 'Mieso', 'Wedliny', 'Warzywa', 'Owoce', 'Pieczywo', 'Produkty suche', 'Napoje', 'Chemia', 'Artykuly Gospodarcze', 'Inne']));
+
+    // --- ROBUST DATA MIGRATION ---
+    const migrateCleanedRoomsData = () => {
+        let needsSave = false;
+        if (!Array.isArray(cleanedRooms)) {
+            cleanedRooms = [];
+            needsSave = true;
+        }
+        
+        cleanedRooms.forEach(item => {
+            if (item && typeof item.count !== 'undefined' && typeof item.roomCount === 'undefined') {
+                item.roomCount = item.count;
+                item.guestCount = 0; // Default guest count for old entries
+                delete item.count;
+                needsSave = true;
+            }
+        });
+        if (needsSave) {
+            console.log("Migrating cleanedRooms data to new format.");
+            DB.set('cleanedRooms', cleanedRooms);
+        }
+    };
+    migrateCleanedRoomsData();
+    // --- END MIGRATION ---
+
+    const saveData = () => {
+        DB.set('products', products);
+        DB.set('suppliers', suppliers);
+        DB.set('purchases', purchases);
+        DB.set('breakfasts', breakfasts);
+        DB.set('cleanedRooms', cleanedRooms);
+        DB.set('categories', categories);
+    };
+
+    function refreshAll() {
+        renderProducts();
+        renderSuppliers();
+        renderPurchases();
+        renderBreakfasts();
+        renderCleanedRooms();
+        updateSelects();
+        updateDashboard();
+        renderPriceAnalysis();
+        renderAnalysis();
+        renderCategoryAnalysis();
+        updateDateInputs();
+        updateAnalysisToggle();
+        updateUndoButtonState();
+    }
+    
+    // --- RENDER & UPDATE ---
+    function renderProducts() {
+        const table = document.getElementById('products-table');
+        table.innerHTML = [...products].sort((a,b) => a.name.localeCompare(b.name)).map(p => `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-4">${p.name}</td>
+                <td class="p-4">${(p.productUsage || 'food') === 'non_food' ? 'Pokoje' : 'Sniadania'}</td>
+                <td class="p-4">${p.category || '<i>Brak</i>'}</td>
+                <td class="p-4 text-right">
+                    <button onclick="openEditProductModal('${p.id}')" class="text-blue-500 hover:text-blue-700 mr-3"><i class="fas fa-pencil-alt"></i></button>
+                    <button onclick="confirmDelete('${p.id}', 'product')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+        document.getElementById('products-placeholder').style.display = products.length === 0 ? 'block' : 'none';
+    }
+
+    function renderSuppliers() {
+        const table = document.getElementById('suppliers-table');
+        table.innerHTML = [...suppliers].sort((a,b) => a.name.localeCompare(b.name)).map(s => `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-4">${s.name}</td>
+                <td class="p-4 text-right">
+                    <button onclick="openEditSupplierModal('${s.id}')" class="text-blue-500 hover:text-blue-700 mr-3"><i class="fas fa-pencil-alt"></i></button>
+                    <button onclick="confirmDelete('${s.id}', 'supplier')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+        document.getElementById('suppliers-placeholder').style.display = suppliers.length === 0 ? 'block' : 'none';
+    }
+    
+    function renderPurchases() {
+        const table = document.getElementById('purchases-table');
+        table.innerHTML = [...purchases].sort((a, b) => new Date(b.date) - new Date(a.date)).map(p => {
+            const supplier = suppliers.find(s => s.id === p.supplierId);
+            const supplierName = supplier ? supplier.name : '<i class="text-red-500">Usuniety</i>';
+            const product = products.find(prod => prod.id === p.productId)
+            const quantityFormatted = `${p.quantity} ${product?.unit || ''}`
+            
+            return `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4">${new Date(p.date).toLocaleDateString('pl-PL')}</td>
+                    <td class="p-4 text-gray-600">${p.invoiceNumber || '<i>-</i>'}</td>
+                    <td class="p-4">${supplierName}</td>
+                    <td class="p-4">${p.productName}</td>
+                    <td class="p-4">${quantityFormatted}</td>
+                    <td class="p-4">${p.cost.toFixed(2)} zl</td>
+                    <td class="p-4 text-right">
+                        <button onclick="openEditPurchaseModal('${p.id}')" class="text-blue-500 hover:text-blue-700 mr-3"><i class="fas fa-pencil-alt"></i></button>
+                        <button onclick="confirmDelete('${p.id}', 'purchase')" class="text-red-500"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`
+        }).join('');
+        document.getElementById('purchases-placeholder').style.display = purchases.length === 0 ? 'block' : 'none';
+    }
+
+    function renderBreakfasts() {
+        const table = document.getElementById('breakfasts-table');
+        table.innerHTML = [...breakfasts].sort((a, b) => new Date(b.date) - new Date(a.date)).map(b => `
+            <tr class="border-b hover:bg-gray-50"><td class="p-4">${new Date(b.date).toLocaleDateString('pl-PL')}</td><td class="p-4">${b.count}</td><td class="p-4 text-right"><button onclick="confirmDelete('${b.id}', 'breakfast')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>
+        `).join('');
+        document.getElementById('breakfasts-placeholder').style.display = breakfasts.length === 0 ? 'block' : 'none';
+    }
+
+    function renderCleanedRooms() {
+        const table = document.getElementById('rooms-table');
+        table.innerHTML = [...cleanedRooms].sort((a, b) => new Date(b.date) - new Date(a.date)).map(r => `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-4">${new Date(r.date).toLocaleDateString('pl-PL')}</td>
+                <td class="p-4">${r.roomCount || 0}</td>
+                <td class="p-4">${r.guestCount || 0}</td>
+                <td class="p-4 text-right"><button onclick="confirmDelete('${r.id}', 'room')" class="text-red-500"><i class="fas fa-trash"></i></button></td>
+            </tr>
+        `).join('');
+        document.getElementById('rooms-placeholder').style.display = cleanedRooms.length === 0 ? 'block' : 'none';
+    }
+
+    function updateSelects() {
+        const productOptionsHTML = '<option value="">Wybierz...</option>' + 
+            [...products].sort((a,b) => a.name.localeCompare(b.name))
+            .map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+        const supplierOptionsHTML = '<option value="">Wybierz...</option>' + 
+            [...suppliers].sort((a,b) => a.name.localeCompare(b.name))
+            .map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+        document.querySelectorAll('.product-select').forEach(select => {
+             const currentValue = select.value;
+             select.innerHTML = productOptionsHTML;
+             select.value = currentValue;
+        });
+        document.getElementById('price-analysis-product-select').innerHTML = '<option value="">-- Wybierz produkt --</option>' + productOptionsHTML;
+
+
+        document.querySelectorAll('.supplier-select').forEach(select => {
+             const currentValue = select.value;
+             select.innerHTML = supplierOptionsHTML;
+             select.value = currentValue;
+        });
+
+        document.getElementById('category-datalist').innerHTML = categories.map(c => `<option value="${c}">`).join('');
+    }
+
+    function updateDashboard() {
+        const { rangedPurchases, rangedBreakfastsCount, rangedRoomsCount, rangedGuestsCount } = getDataForRange();
+        const foodPurchases = rangedPurchases.filter(p => (products.find(prod => prod.id === p.productId)?.productUsage || 'food') === 'food');
+        const nonFoodPurchases = rangedPurchases.filter(p => products.find(prod => prod.id === p.productId)?.productUsage === 'non_food');
+        
+        const totalFoodExpenses = foodPurchases.reduce((sum, p) => sum + p.cost, 0);
+        const totalNonFoodExpenses = nonFoodPurchases.reduce((sum, p) => sum + p.cost, 0);
+
+        document.getElementById('total-food-expenses').textContent = `${totalFoodExpenses.toFixed(2)} zl`;
+        document.getElementById('total-nonfood-expenses').textContent = `${totalNonFoodExpenses.toFixed(2)} zl`;
+        document.getElementById('total-breakfasts-count').textContent = rangedBreakfastsCount;
+        document.getElementById('average-breakfast-cost').textContent = `${(rangedBreakfastsCount > 0 ? totalFoodExpenses / rangedBreakfastsCount : 0).toFixed(2)} zl`;
+        document.getElementById('total-rooms-count').textContent = rangedRoomsCount;
+        document.getElementById('average-room-cost').textContent = `${(rangedRoomsCount > 0 ? totalNonFoodExpenses / rangedRoomsCount : 0).toFixed(2)} zl`;
+
+        // GUEST METRICS
+        document.getElementById('total-guests-count').textContent = rangedGuestsCount;
+        document.getElementById('average-nonfood-cost-per-guest').textContent = `${(rangedGuestsCount > 0 ? totalNonFoodExpenses / rangedGuestsCount : 0).toFixed(2)} zl`;
+        document.getElementById('average-food-cost-per-guest').textContent = `${(rangedGuestsCount > 0 ? totalFoodExpenses / rangedGuestsCount : 0).toFixed(2)} zl`;
+    }
+    
+    function updateDateInputs() {
+        document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+        document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+    }
+    
+    function updateAnalysisToggle() {
+        document.querySelectorAll('#analysis-type-toggle-product button, #analysis-type-toggle-category button').forEach(btn => {
+            btn.classList.toggle('bg-white', btn.dataset.type === currentAnalysisType);
+            btn.classList.toggle('text-blue-600', btn.dataset.type === currentAnalysisType);
+            btn.classList.toggle('shadow-sm', btn.dataset.type === currentAnalysisType);
+            btn.classList.toggle('text-gray-600', btn.dataset.type !== currentAnalysisType);
+        });
+    }
+    
+    function updateUndoButtonState() {
+        const undoBtn = document.getElementById('undo-import-btn');
+        if (undoBtn) {
+            undoBtn.disabled = !localStorage.getItem('preImportBackup');
+        }
+    }
+
+    // --- ANALYSIS ---
+    const getDataForRange = () => {
+        const rangedPurchases = purchases.filter(p => { const d = new Date(p.date); return d >= startDate && d <= endDate; });
+        const rangedBreakfastsCount = breakfasts.filter(b => { const d = new Date(b.date); return d >= startDate && d <= endDate; }).reduce((sum, b) => sum + b.count, 0);
+        const rangedRooms = cleanedRooms.filter(r => { const d = new Date(r.date); return d >= startDate && d <= endDate; });
+        const rangedRoomsCount = rangedRooms.reduce((sum, r) => sum + (r.roomCount || 0), 0);
+        const rangedGuestsCount = rangedRooms.reduce((sum, r) => sum + (r.guestCount || 0), 0);
+        return { rangedPurchases, rangedBreakfastsCount, rangedRoomsCount, rangedGuestsCount };
+    };
+
+    function renderPriceAnalysis() {
+        const selectedProductId = document.getElementById('price-analysis-product-select').value;
+        const tableBody = document.getElementById('price-analysis-table');
+        const placeholder = document.getElementById('price-analysis-placeholder');
+        
+        if (!selectedProductId) {
+            tableBody.innerHTML = '';
+            placeholder.textContent = "Wybierz produkt, aby zobaczyc historie jego cen.";
+            placeholder.style.display = 'block';
+            return;
+        }
+
+        const { rangedPurchases } = getDataForRange();
+        const productPurchases = rangedPurchases
+            .filter(p => p.productId === selectedProductId)
+            .sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        if (productPurchases.length === 0) {
+            tableBody.innerHTML = '';
+            placeholder.textContent = "Brak zakupow wybranego produktu w zadanym okresie.";
+            placeholder.style.display = 'block';
+            return;
+        }
+
+        placeholder.style.display = 'none';
+        const product = products.find(p => p.id === selectedProductId);
+
+        tableBody.innerHTML = productPurchases.map(p => {
+            const supplier = suppliers.find(s => s.id === p.supplierId);
+            const supplierName = supplier ? supplier.name : '<i class="text-red-500">Usuniety</i>';
+            const unitPrice = p.quantity > 0 ? (p.cost / p.quantity).toFixed(2) : 'N/A';
+            return `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4">${new Date(p.date).toLocaleDateString('pl-PL')}</td>
+                    <td class="p-4">${supplierName}</td>
+                    <td class="p-4">${p.quantity} ${product?.unit || ''}</td>
+                    <td class="p-4">${p.cost.toFixed(2)} zl</td>
+                    <td class="p-4 font-bold">${unitPrice} zl / ${product?.unit || 'jedn.'}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function renderAnalysis() {
+        const { rangedPurchases, rangedBreakfastsCount, rangedRoomsCount } = getDataForRange();
+        const analysisTable = document.getElementById('analysis-table');
+        const analysisTargetCount = currentAnalysisType === 'food' ? rangedBreakfastsCount : rangedRoomsCount;
+        const relevantProducts = products.filter(p => (p.productUsage || 'food') === currentAnalysisType);
+        const purchasesToAnalyze = rangedPurchases.filter(p => relevantProducts.some(rp => rp.id === p.productId));
+        if (analysisTargetCount === 0 || relevantProducts.length === 0) {
+            document.getElementById('analysis-placeholder').style.display = 'block';
+            analysisTable.innerHTML = ''; return;
+        }
+        document.getElementById('analysis-placeholder').style.display = 'none';
+        const productSummary = {};
+        purchasesToAnalyze.forEach(p => {
+            if(!productSummary[p.productId]) {
+                productSummary[p.productId] = { quantity: 0 };
+            }
+            productSummary[p.productId].quantity += p.quantity;
+        });
+
+        analysisTable.innerHTML = relevantProducts.map(product => {
+            const totalConsumption = productSummary[product.id]?.quantity || 0;
+            const averagePerUnit = totalConsumption / analysisTargetCount;
+            let avgText = 'N/A';
+            if (averagePerUnit > 0) {
+                if (product.type === 'weight') avgText = `${(averagePerUnit * 1000).toFixed(2)} g`;
+                else if (product.type === 'volume') avgText = `${(averagePerUnit * 1000).toFixed(2)} ml`;
+                else avgText = `${averagePerUnit.toFixed(2)} ${product.unit}`;
+            }
+            const unitLabel = currentAnalysisType === 'food' ? 'sniadanie' : 'pokoj';
+            return `<tr class="border-b hover:bg-gray-50"><td class="p-4">${product.name}</td><td class="p-4">${totalConsumption.toFixed(2)} ${product.unit}</td><td class="p-4">${avgText} / ${unitLabel}</td></tr>`;
+        }).join('');
+    }
+
+    function renderCategoryAnalysis() {
+        const { rangedPurchases, rangedBreakfastsCount, rangedRoomsCount } = getDataForRange();
+        const analysisTable = document.getElementById('category-analysis-table');
+        const analysisTargetCount = currentAnalysisType === 'food' ? rangedBreakfastsCount : rangedRoomsCount;
+        const purchasesToAnalyze = rangedPurchases.filter(p => (products.find(prod => prod.id === p.productId)?.productUsage || 'food') === currentAnalysisType);
+        const totalExpenses = purchasesToAnalyze.reduce((sum, p) => sum + p.cost, 0);
+        if (totalExpenses === 0) {
+            document.getElementById('category-analysis-placeholder').style.display = 'block';
+            analysisTable.innerHTML = ''; return;
+        }
+        document.getElementById('category-analysis-placeholder').style.display = 'none';
+        const categorySummary = {};
+        purchasesToAnalyze.forEach(purchase => {
+            const product = products.find(p => p.id === purchase.productId);
+            const category = product?.category || 'Brak kategorii';
+            if (!categorySummary[category]) categorySummary[category] = { totalCost: 0, totalQuantity: { weight: 0, volume: 0, pieces: 0 }};
+            categorySummary[category].totalCost += purchase.cost;
+            if (product?.type) categorySummary[category].totalQuantity[product.type] += purchase.quantity;
+        });
+        analysisTable.innerHTML = Object.keys(categorySummary).sort((a, b) => categorySummary[b].totalCost - categorySummary[a].totalCost).map(categoryName => {
+            const categoryData = categorySummary[categoryName];
+            let avgConsumptionHtml = 'N/A';
+            if (analysisTargetCount > 0) {
+                const parts = [];
+                const { weight, volume, pieces } = categoryData.totalQuantity;
+                if (weight > 0) parts.push(`${(weight / analysisTargetCount * 1000).toFixed(2)} g`);
+                if (volume > 0) parts.push(`${(volume / analysisTargetCount * 1000).toFixed(2)} ml`);
+                if (pieces > 0) parts.push(`${(pieces / analysisTargetCount).toFixed(2)} szt`);
+                if (parts.length > 0) avgConsumptionHtml = parts.join(', ');
+            }
+            const unitLabel = currentAnalysisType === 'food' ? 'sniadanie' : 'pokoj';
+            return `<tr class="border-b hover:bg-gray-50">
+                        <td class="p-4 font-medium">${categoryName}</td>
+                        <td class="p-4">${categoryData.totalCost.toFixed(2)} zl</td>
+                        <td class="p-4">${(categoryData.totalCost / totalExpenses * 100).toFixed(2)}%</td>
+                        <td class="p-4">${avgConsumptionHtml} / ${unitLabel}</td>
+                    </tr>`;
+        }).join('');
+    }
+
+    // --- EVENT LISTENERS ---
+    function setDateRange(start, end) {
+        startDate = start;
+        endDate = end;
+        refreshAll();
+    }
+    document.getElementById('price-analysis-product-select').addEventListener('change', renderPriceAnalysis);
+
+    document.getElementById('add-product-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const name = document.getElementById('product-name').value;
+        const productUsage = e.target.elements.productUsage.value;
+        const type = document.getElementById('product-type').value;
+        const category = document.getElementById('product-category').value.trim();
+        const unitMap = { weight: 'kg', volume: 'l', pieces: 'szt' };
+        if (!name) return;
+        products.push({ id: crypto.randomUUID(), name, unit: unitMap[type], type, productUsage, category });
+        if (category && !categories.includes(category)) categories.push(category);
+        saveData();
+        refreshAll();
+        e.target.reset();
+        closeModal('addProductModal');
+    });
+    
+    document.getElementById('edit-product-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const id = document.getElementById('edit-product-id').value;
+        const product = products.find(p => p.id === id);
+        if (!product) return;
+        product.name = document.getElementById('edit-product-name').value;
+        product.productUsage = e.target.elements.edit_productUsage.value;
+        product.type = document.getElementById('edit-product-type').value;
+        product.category = document.getElementById('edit-product-category').value.trim();
+        const unitMap = { weight: 'kg', volume: 'l', pieces: 'szt' };
+        product.unit = unitMap[product.type];
+        if (product.category && !categories.includes(product.category)) categories.push(product.category);
+        purchases.forEach(p => { if (p.productId === id) p.productName = product.name; });
+        saveData();
+        refreshAll();
+        closeModal('editProductModal');
+    });
+
+    document.getElementById('add-supplier-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const name = document.getElementById('supplier-name').value.trim();
+        if (name) {
+            suppliers.push({ id: crypto.randomUUID(), name });
+            saveData();
+            refreshAll();
+            e.target.reset();
+            closeModal('addSupplierModal');
+        }
+    });
+
+    document.getElementById('edit-supplier-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const id = document.getElementById('edit-supplier-id').value;
+        const name = document.getElementById('edit-supplier-name').value.trim();
+        const supplier = suppliers.find(s => s.id === id);
+        if (supplier && name) {
+            supplier.name = name;
+            saveData();
+            refreshAll();
+            closeModal('editSupplierModal');
+        }
+    });
+
+    document.getElementById('add-purchase-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const dateStr = document.getElementById('purchase-date').value;
+        const supplierId = document.getElementById('purchase-supplier-select').value;
+        const productId = document.getElementById('purchase-product-select').value;
+        const quantity = parseFloat(document.getElementById('purchase-quantity').value);
+        const cost = parseFloat(document.getElementById('purchase-cost').value);
+        if (!dateStr || !supplierId || !productId || !(quantity > 0) || !(cost >= 0)) {
+            alert("Prosze wypelnic wszystkie wymagane pola (data, dostawca, produkt, ilosc, koszt).");
+            return;
+        }
+        const product = products.find(p => p.id === productId);
+        purchases.push({ id: crypto.randomUUID(), supplierId, productId, productName: product.name, quantity, cost, date: new Date(dateStr).toISOString(), invoiceNumber: null });
+        saveData();
+        refreshAll();
+        e.target.reset();
+        document.getElementById('purchase-date').valueAsDate = new Date();
+        closeModal('addPurchaseModal');
+    });
+
+    document.getElementById('edit-purchase-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const id = document.getElementById('edit-purchase-id').value;
+        const purchase = purchases.find(p => p.id === id);
+        if (!purchase) return;
+        
+        const supplierId = document.getElementById('edit-purchase-supplier-select').value;
+        const productId = document.getElementById('edit-purchase-product-select').value;
+        const product = products.find(p => p.id === productId);
+
+        purchase.date = new Date(document.getElementById('edit-purchase-date').value).toISOString();
+        purchase.supplierId = supplierId;
+        purchase.productId = productId;
+        purchase.productName = product.name;
+        purchase.quantity = parseFloat(document.getElementById('edit-purchase-quantity').value);
+        purchase.cost = parseFloat(document.getElementById('edit-purchase-cost').value);
+        
+        saveData();
+        refreshAll();
+        closeModal('editPurchaseModal');
+    });
+
+    document.getElementById('add-batch-purchase-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const dateStr = document.getElementById('batch-purchase-date').value;
+        const supplierId = document.getElementById('batch-purchase-supplier-select').value;
+        const invoiceNumber = document.getElementById('batch-purchase-invoice').value.trim() || null;
+        if (!dateStr || !supplierId) {
+            alert("Prosze wybrac date zakupu i dostawce.");
+            return;
+        }
+
+        const items = document.querySelectorAll('.batch-item');
+        const batchId = crypto.randomUUID();
+        let itemsAdded = 0;
+
+        items.forEach(item => {
+            const productId = item.querySelector('.batch-product-select').value;
+            const quantity = parseFloat(item.querySelector('.batch-quantity').value);
+            const cost = parseFloat(item.querySelector('.batch-cost').value);
+
+            if (productId && quantity > 0 && cost >= 0) {
+                const product = products.find(p => p.id === productId);
+                purchases.push({
+                    id: crypto.randomUUID(),
+                    batchId,
+                    invoiceNumber,
+                    supplierId,
+                    productId,
+                    productName: product.name,
+                    quantity,
+                    cost,
+                    date: new Date(dateStr).toISOString()
+                });
+                itemsAdded++;
+            }
+        });
+
+        if (itemsAdded > 0) {
+            saveData();
+            refreshAll();
+            closeModal('addBatchPurchaseModal');
+        } else {
+            alert("Nie dodano zadnych poprawnych produktow. Sprawdz, czy wypelniles wszystkie pola dla co najmniej jednego produktu.");
+        }
+    });
+
+    document.getElementById('add-breakfast-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const dateStr = document.getElementById('breakfast-date').value;
+        const count = parseInt(document.getElementById('breakfast-count').value);
+        if (!dateStr || !(count >= 0)) return;
+        const dateKey = new Date(dateStr).toISOString().split('T')[0];
+        const existingEntry = breakfasts.find(item => new Date(item.date).toISOString().startsWith(dateKey));
+        if (existingEntry) {
+             if(confirm(`Istnieje juz wpis dla daty ${new Date(dateStr).toLocaleDateString('pl-PL')}. Czy chcesz go nadpisac nowa wartoscia: ${count}?`)) {
+                existingEntry.count = count;
+             } else { return; }
+        } else {
+             breakfasts.push({ id: crypto.randomUUID(), date: new Date(dateStr).toISOString(), count });
+        }
+        saveData();
+        refreshAll();
+        e.target.reset();
+        document.getElementById('breakfast-date').valueAsDate = new Date();
+    });
+    
+    document.getElementById('add-room-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const dateStr = document.getElementById('room-date').value;
+        const roomCount = parseInt(document.getElementById('room-count').value);
+        const guestCount = parseInt(document.getElementById('guest-count').value);
+
+        if (!dateStr || !(roomCount >= 0) || !(guestCount >= 0)) {
+            alert("Prosze wypelnic wszystkie pola poprawnymi wartosciami (liczby nie moga byc ujemne).");
+            return;
+        }
+        
+        const dateKey = new Date(dateStr).toISOString().split('T')[0];
+        const existingEntry = cleanedRooms.find(item => item && new Date(item.date).toISOString().startsWith(dateKey));
+        
+        if (existingEntry) {
+             if(confirm(`Istnieje juz wpis dla daty ${new Date(dateStr).toLocaleDateString('pl-PL')}. Czy chcesz go nadpisac nowymi wartosciami (Pokoje: ${roomCount}, Goscie: ${guestCount})?`)) {
+                existingEntry.roomCount = roomCount;
+                existingEntry.guestCount = guestCount;
+             } else {
+                 return;
+             }
+        } else {
+             cleanedRooms.push({ id: crypto.randomUUID(), date: new Date(dateStr).toISOString(), roomCount, guestCount });
+        }
+        saveData();
+        refreshAll();
+        e.target.reset();
+        document.getElementById('room-date').valueAsDate = new Date();
+    });
+    
+    document.getElementById('start-date').addEventListener('change', () => setDateRange(new Date(document.getElementById('start-date').value), endDate));
+    document.getElementById('end-date').addEventListener('change', () => setDateRange(startDate, new Date(document.getElementById('end-date').value)));
+
+    document.getElementById('range-this-month').addEventListener('click', () => {
+        const now = new Date();
+        setDateRange(new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59));
+    });
+    document.getElementById('range-last-month').addEventListener('click', () => {
+        const now = new Date();
+        setDateRange(new Date(now.getFullYear(), now.getMonth() - 1, 1), new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59));
+    });
+    document.getElementById('range-this-year').addEventListener('click', () => {
+        const now = new Date();
+        setDateRange(new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear(), 11, 31, 23, 59, 59));
+    });
+    
+    // --- Data Management (Import/Export) ---
+
+    document.getElementById('export-json-btn').addEventListener('click', () => {
+        const dataToExport = { products, suppliers, purchases, breakfasts, cleanedRooms, categories };
+        const dataStr = JSON.stringify(dataToExport, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const date = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `kopia_zapasowa_kosztow-${date}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('export-csv-btn').addEventListener('click', () => {
+        const { rangedPurchases } = getDataForRange();
+        if (rangedPurchases.length === 0) {
+            alert("Brak zakupow w wybranym okresie do wyeksportowania.");
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Data;Nr Faktury;Dostawca;Produkt;Kategoria;Ilosc;Jednostka;Calkowity Koszt\r\n";
+
+        rangedPurchases.forEach(p => {
+            const product = products.find(prod => prod.id === p.productId) || {};
+            const supplier = suppliers.find(s => s.id === p.supplierId) || {};
+            const row = [
+                new Date(p.date).toLocaleDateString('pl-PL'),
+                p.invoiceNumber || '',
+                `"${supplier.name || 'Brak'}"`,
+                `"${p.productName}"`,
+                `"${product.category || 'Brak'}"`,
+                p.quantity.toString().replace('.',','),
+                product.unit || '',
+                p.cost.toFixed(2).replace('.',',')
+            ].join(";");
+            csvContent += row + "\r\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const a = document.createElement('a');
+        const startDateStr = startDate.toISOString().slice(0, 10);
+        const endDateStr = endDate.toISOString().slice(0, 10);
+        a.href = encodedUri;
+        a.download = `raport_zakupow_${startDateStr}_do_${endDateStr}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    });
+
+    document.getElementById('import-data-btn').addEventListener('click', () => document.getElementById('import-file-input').click());
+    document.getElementById('import-file-input').addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                if (importedData.products && importedData.purchases) {
+                    if (confirm("Czy na pewno chcesz importowac dane? Spowoduje to nadpisanie wszystkich obecnych danych!")) {
+                        const backupData = { products, suppliers, purchases, breakfasts, cleanedRooms, categories };
+                        DB.set('preImportBackup', backupData);
+                        products = importedData.products || [];
+                        suppliers = importedData.suppliers || [];
+                        purchases = importedData.purchases || [];
+                        breakfasts = importedData.breakfasts || [];
+                        cleanedRooms = importedData.cleanedRooms || [];
+                        categories = importedData.categories || [...new Set(products.map(p => p.category).filter(Boolean))];
+                        saveData();
+                        migrateCleanedRoomsData();
+                        refreshAll();
+                        alert("Dane zostaly pomyslnie zaimportowane!");
+                    }
+                } else { alert("Blad: Nieprawidlowy format pliku."); }
+            } catch (error) { alert("Blad: Nie mozna odczytac pliku."); }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    });
+    
+    document.getElementById('undo-import-btn').addEventListener('click', () => {
+        const backupJson = localStorage.getItem('preImportBackup');
+        if (!backupJson) {
+            alert("Brak importu do cofniecia.");
+            return;
+        }
+        if (confirm("Czy na pewno chcesz cofnac ostatni import? Obecne dane zostana zastapione danymi sprzed importu.")) {
+            const backup = JSON.parse(backupJson);
+            products = backup.products || [];
+            suppliers = backup.suppliers || [];
+            purchases = backup.purchases || [];
+            breakfasts = backup.breakfasts || [];
+            cleanedRooms = backup.cleanedRooms || [];
+            categories = backup.categories || [];
+            saveData();
+            refreshAll();
+            alert("Ostatni import zostal cofniety.");
+        }
+    });
+
+    function setupAnalysisToggles() {
+        document.querySelectorAll('#analysis-type-toggle-product, #analysis-type-toggle-category').forEach(toggle => {
+            toggle.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    currentAnalysisType = e.target.dataset.type;
+                    refreshAll();
+                }
+            });
+        });
+    }
+
+    // --- Modal & Deletion Logic ---
+
+    window.confirmDelete = (id, type) => {
+        let message = "Czy na pewno chcesz usunac ten element?";
+        if(type === 'supplier') {
+            message = "Czy na pewno chcesz usunac tego dostawce? Ta operacja nie usunie powiazanych z nim zakupow, ale nie bedzie mozna go juz wybrac.";
+        }
+        document.getElementById('confirm-text').textContent = message;
+        openModal('confirmModal');
+        const okBtn = document.getElementById('confirmOk');
+        const newOkBtn = okBtn.cloneNode(true);
+        okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+        newOkBtn.onclick = () => {
+            if (type === 'product') { products = products.filter(p => p.id !== id); purchases = purchases.filter(p => p.productId !== id); }
+            else if (type === 'supplier') { suppliers = suppliers.filter(s => s.id !== id); }
+            else if (type === 'purchase') { purchases = purchases.filter(p => p.id !== id); }
+            else if (type === 'breakfast') { breakfasts = breakfasts.filter(b => b.id !== id); }
+            else if (type === 'room') { cleanedRooms = cleanedRooms.filter(r => r.id !== id); }
+            saveData();
+            refreshAll();
+            closeModal('confirmModal');
+        };
+        document.getElementById('confirmCancel').onclick = () => closeModal('confirmModal');
+    };
+
+    window.openModal = (id) => document.getElementById(id).classList.add('is-open');
+    window.closeModal = (id) => document.getElementById(id).classList.remove('is-open');
+
+    window.openEditProductModal = (id) => {
+        const product = products.find(p => p.id === id);
+        if (!product) return;
+        document.getElementById('edit-product-id').value = product.id;
+        document.getElementById('edit-product-name').value = product.name;
+        document.querySelector(`input[name="edit_productUsage"][value="${product.productUsage || 'food'}"]`).checked = true;
+        document.getElementById('edit-product-type').value = product.type;
+        document.getElementById('edit-product-category').value = product.category || '';
+        openModal('editProductModal');
+    };
+
+    window.openEditSupplierModal = (id) => {
+        const supplier = suppliers.find(s => s.id === id);
+        if (!supplier) return;
+        document.getElementById('edit-supplier-id').value = supplier.id;
+        document.getElementById('edit-supplier-name').value = supplier.name;
+        openModal('editSupplierModal');
+    };
+
+    window.openEditPurchaseModal = (id) => {
+        const purchase = purchases.find(p => p.id === id);
+        if (!purchase) return;
+        document.getElementById('edit-purchase-id').value = purchase.id;
+        document.getElementById('edit-purchase-date').value = purchase.date.split('T')[0];
+        document.getElementById('edit-purchase-supplier-select').value = purchase.supplierId;
+        document.getElementById('edit-purchase-product-select').value = purchase.productId;
+        document.getElementById('edit-purchase-quantity').value = purchase.quantity;
+        document.getElementById('edit-purchase-cost').value = purchase.cost;
+        openModal('editPurchaseModal');
+    };
+
+    const batchItemsContainer = document.getElementById('batch-purchase-items-container');
+    const createBatchItemRow = () => {
+        const div = document.createElement('div');
+        div.className = 'batch-item grid grid-cols-1 md:grid-cols-3 gap-2 border p-2 rounded-md relative';
+        
+        const selectOptions = '<option value="">Wybierz produkt...</option>' + 
+            [...products].sort((a,b) => a.name.localeCompare(b.name))
+            .map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+        div.innerHTML = `
+            <select class="batch-product-select p-2 border rounded-md w-full">${selectOptions}</select>
+            <input type="number" step="0.01" placeholder="Ilosc" class="batch-quantity p-2 border rounded-md w-full">
+            <input type="number" step="0.01" placeholder="Calkowity koszt (zl)" class="batch-cost p-2 border rounded-md w-full">
+            <button type="button" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs" onclick="this.parentElement.remove()">X</button>
+        `;
+        batchItemsContainer.appendChild(div);
+    };
+
+    document.getElementById('add-batch-item-btn').addEventListener('click', createBatchItemRow);
+
+    window.openBatchPurchaseModal = () => {
+        batchItemsContainer.innerHTML = '';
+        createBatchItemRow();
+        document.getElementById('batch-purchase-date').valueAsDate = new Date();
+        document.getElementById('batch-purchase-invoice').value = '';
+        const supplierSelect = document.getElementById('batch-purchase-supplier-select');
+        supplierSelect.innerHTML = '<option value="">Wybierz...</option>' + [...suppliers].sort((a,b) => a.name.localeCompare(b.name)).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        openModal('addBatchPurchaseModal');
+    };
+
+    window.changeTab = (event, tabID) => {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabID).classList.add('active');
+        event.currentTarget.classList.add('active');
+    };
+    
+    // --- INITIAL LOAD ---
+    function setInitialDateRange() {
+        const now = new Date();
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        refreshAll();
+    }
+
+    // Add class to selects for easier updating
+    document.getElementById('purchase-product-select').classList.add('product-select');
+    document.getElementById('edit-purchase-product-select').classList.add('product-select');
+    document.getElementById('purchase-supplier-select').classList.add('supplier-select');
+    document.getElementById('edit-purchase-supplier-select').classList.add('supplier-select');
+    document.getElementById('batch-purchase-supplier-select').classList.add('supplier-select');
+
+    // Initial setup
+    setupAnalysisToggles();
+    setInitialDateRange();
+    document.getElementById('breakfast-date').valueAsDate = new Date();
+    document.getElementById('room-date').valueAsDate = new Date();
+    document.getElementById('purchase-date').valueAsDate = new Date();
+    document.querySelector('.tab').classList.add('active');
+    document.querySelector('.tab-content').classList.add('active');
+
+});
+</script>
+</body>
+</html>
